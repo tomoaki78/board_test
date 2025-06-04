@@ -1,0 +1,157 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta http-equiv="Content-Style-Type" content="text/css">
+  <title></title>
+  <meta name="Generator" content="Cocoa HTML Writer">
+  <meta name="CocoaVersion" content="2299.77">
+  <style type="text/css">
+    p.p1 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Helvetica}
+    p.p2 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Helvetica; min-height: 14.0px}
+  </style>
+</head>
+<body>
+<p class="p1">&lt;!-- Firebase SDK --&gt;</p>
+<p class="p1">&lt;script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"&gt;&lt;/script&gt;</p>
+<p class="p1">&lt;script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"&gt;&lt;/script&gt;</p>
+<p class="p1">&lt;script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"&gt;&lt;/script&gt;</p>
+<p class="p2"><br></p>
+<p class="p1">&lt;div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;h3&gt;掲示板&lt;/h3&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;input type="text" id="nameInput" placeholder="名前" /&gt;&lt;br&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;input type="file" id="iconInput" accept="image/*" /&gt;&lt;br&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;textarea id="commentInput" placeholder="コメントを入力してください" rows="3" cols="40"&gt;&lt;/textarea&gt;&lt;br&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;button id="submitBtn"&gt;投稿&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;div id="commentList"&gt;&lt;/div&gt;</p>
+<p class="p1">&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1">&lt;script&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>const firebaseConfig = {</p>
+<p class="p1"><span class="Apple-converted-space">    </span>apiKey: "AIzaSyBXk0dW2k1W5w32f1f12viaV5s-j6iM1k",</p>
+<p class="p1"><span class="Apple-converted-space">    </span>authDomain: "keiko-salon-board.firebaseapp.com",</p>
+<p class="p1"><span class="Apple-converted-space">    </span>projectId: "keiko-salon-board",</p>
+<p class="p1"><span class="Apple-converted-space">    </span>storageBucket: "keiko-salon-board.appspot.com",</p>
+<p class="p1"><span class="Apple-converted-space">    </span>messagingSenderId: "462083553388",</p>
+<p class="p1"><span class="Apple-converted-space">    </span>appId: "1:462083553388:web:07d442b8d80ce9a3f53d219"</p>
+<p class="p1"><span class="Apple-converted-space">  </span>};</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>firebase.initializeApp(firebaseConfig);</p>
+<p class="p1"><span class="Apple-converted-space">  </span>const db = firebase.firestore();</p>
+<p class="p1"><span class="Apple-converted-space">  </span>const storage = firebase.storage();</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>document.addEventListener("DOMContentLoaded", () =&gt; {</p>
+<p class="p1"><span class="Apple-converted-space">    </span>document.getElementById("submitBtn").addEventListener("click", async () =&gt; {</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const name = document.getElementById("nameInput").value.trim() || "名無し";</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const text = document.getElementById("commentInput").value.trim();</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const file = document.getElementById("iconInput").files[0];</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">      </span>if (!text) return;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">      </span>let iconURL = "";</p>
+<p class="p1"><span class="Apple-converted-space">      </span>if (file) {</p>
+<p class="p1"><span class="Apple-converted-space">        </span>const storageRef = storage.ref("icons/" + Date.now() + "_" + file.name);</p>
+<p class="p1"><span class="Apple-converted-space">        </span>await storageRef.put(file);</p>
+<p class="p1"><span class="Apple-converted-space">        </span>iconURL = await storageRef.getDownloadURL();</p>
+<p class="p1"><span class="Apple-converted-space">      </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">      </span>await db.collection("comments").add({</p>
+<p class="p1"><span class="Apple-converted-space">        </span>name,</p>
+<p class="p1"><span class="Apple-converted-space">        </span>icon: iconURL,</p>
+<p class="p1"><span class="Apple-converted-space">        </span>text,</p>
+<p class="p1"><span class="Apple-converted-space">        </span>created: firebase.firestore.Timestamp.now(),</p>
+<p class="p1"><span class="Apple-converted-space">        </span>parentId: null,</p>
+<p class="p1"><span class="Apple-converted-space">        </span>likes: 0</p>
+<p class="p1"><span class="Apple-converted-space">      </span>});</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">      </span>document.getElementById("commentInput").value = "";</p>
+<p class="p1"><span class="Apple-converted-space">      </span>document.getElementById("iconInput").value = "";</p>
+<p class="p1"><span class="Apple-converted-space">      </span>loadComments();</p>
+<p class="p1"><span class="Apple-converted-space">    </span>});</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>loadComments();</p>
+<p class="p1"><span class="Apple-converted-space">  </span>});</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>async function loadComments() {</p>
+<p class="p1"><span class="Apple-converted-space">    </span>const snapshot = await db.collection("comments").orderBy("created", "desc").get();</p>
+<p class="p1"><span class="Apple-converted-space">    </span>const comments = snapshot.docs.map(doc =&gt; ({ id: doc.id, ...doc.data() }));</p>
+<p class="p1"><span class="Apple-converted-space">    </span>const tree = buildThreadTree(comments);</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>const html = renderThread(tree);</p>
+<p class="p1"><span class="Apple-converted-space">    </span>document.getElementById("commentList").innerHTML = html;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>function buildThreadTree(comments) {</p>
+<p class="p1"><span class="Apple-converted-space">    </span>const map = {};</p>
+<p class="p1"><span class="Apple-converted-space">    </span>const root = [];</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>comments.forEach(c =&gt; map[c.id] = { ...c, children: [] });</p>
+<p class="p1"><span class="Apple-converted-space">    </span>comments.forEach(c =&gt; {</p>
+<p class="p1"><span class="Apple-converted-space">      </span>if (c.parentId &amp;&amp; map[c.parentId]) {</p>
+<p class="p1"><span class="Apple-converted-space">        </span>map[c.parentId].children.push(map[c.id]);</p>
+<p class="p1"><span class="Apple-converted-space">      </span>} else {</p>
+<p class="p1"><span class="Apple-converted-space">        </span>root.push(map[c.id]);</p>
+<p class="p1"><span class="Apple-converted-space">      </span>}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>});</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>return root;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>function renderThread(comments, depth = 0) {</p>
+<p class="p1"><span class="Apple-converted-space">    </span>return comments.map(data =&gt; {</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const iconTag = data.icon</p>
+<p class="p1"><span class="Apple-converted-space">        </span>? `&lt;img src="${data.icon}" width="40" height="40" style="border-radius:50%; margin-right:10px;"&gt;`</p>
+<p class="p1"><span class="Apple-converted-space">        </span>: `&lt;div style="width:40px; height:40px; border-radius:50%; background:#ccc; display:inline-block; margin-right:10px;"&gt;&lt;/div&gt;`;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">      </span>const dateStr = data.created?.toDate</p>
+<p class="p1"><span class="Apple-converted-space">        </span>? data.created.toDate().toLocaleString()</p>
+<p class="p1"><span class="Apple-converted-space">        </span>: "";</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">      </span>return `</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;div style="margin-left:${depth * 30}px; margin-bottom:16px;"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;div style="display:flex; align-items:flex-start;"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>${iconTag}</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;div style="font-weight:bold; font-size:14px;"&gt;${data.name}&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;div style="font-size:13px; background:#f4f4f4; padding:8px; border-radius:6px; max-width:400px;"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>${data.text.replace(/\n/g, "&lt;br&gt;")}</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;div style="font-size:11px; color:#999;"&gt;${dateStr}&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;button onclick="likeComment('${data.id}')"&gt;👍 ${data.likes}&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;button onclick="replyTo('${data.id}', '${data.name}')"&gt;返信&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>${renderThread(data.children, depth + 1)}</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>`;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}).join("");</p>
+<p class="p1"><span class="Apple-converted-space">  </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>async function likeComment(id) {</p>
+<p class="p1"><span class="Apple-converted-space">    </span>const ref = db.collection("comments").doc(id);</p>
+<p class="p1"><span class="Apple-converted-space">    </span>await db.runTransaction(async (t) =&gt; {</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const doc = await t.get(ref);</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const current = doc.data().likes || 0;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>t.update(ref, { likes: current + 1 });</p>
+<p class="p1"><span class="Apple-converted-space">    </span>});</p>
+<p class="p1"><span class="Apple-converted-space">    </span>loadComments();</p>
+<p class="p1"><span class="Apple-converted-space">  </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>function replyTo(parentId, parentName) {</p>
+<p class="p1"><span class="Apple-converted-space">    </span>const replyText = prompt(`「${parentName}」さんに返信：`);</p>
+<p class="p1"><span class="Apple-converted-space">    </span>if (!replyText) return;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>const name = prompt("あなたの名前は？") || "名無し";</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>db.collection("comments").add({</p>
+<p class="p1"><span class="Apple-converted-space">      </span>name,</p>
+<p class="p1"><span class="Apple-converted-space">      </span>icon: "", // 簡易化（アイコンは無し）</p>
+<p class="p1"><span class="Apple-converted-space">      </span>text: replyText,</p>
+<p class="p1"><span class="Apple-converted-space">      </span>created: firebase.firestore.Timestamp.now(),</p>
+<p class="p1"><span class="Apple-converted-space">      </span>parentId,</p>
+<p class="p1"><span class="Apple-converted-space">      </span>likes: 0</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}).then(() =&gt; loadComments());</p>
+<p class="p1"><span class="Apple-converted-space">  </span>}</p>
+<p class="p1">&lt;/script&gt;</p>
+</body>
+</html>
