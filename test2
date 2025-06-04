@@ -1,0 +1,141 @@
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
+
+<div>
+  <h3>掲示板</h3>
+  <input type="text" id="nameInput" placeholder="名前" /><br>
+  <input type="file" id="iconInput" accept="image/*" /><br>
+  <textarea id="commentInput" placeholder="コメントを入力してください" rows="3" cols="40"></textarea><br>
+  <button id="submitBtn">投稿</button>
+  <div id="commentList"></div>
+</div>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyBXk0dW2k1W5w32f1f12viaV5s-j6iM1k",
+    authDomain: "keiko-salon-board.firebaseapp.com",
+    projectId: "keiko-salon-board",
+    storageBucket: "keiko-salon-board.appspot.com",
+    messagingSenderId: "462083553388",
+    appId: "1:462083553388:web:07d442b8d80ce9a3f53d219"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+  const storage = firebase.storage();
+
+  document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("submitBtn").addEventListener("click", async () => {
+      const name = document.getElementById("nameInput").value.trim() || "名無し";
+      const text = document.getElementById("commentInput").value.trim();
+      const file = document.getElementById("iconInput").files[0];
+
+      if (!text) return;
+
+      let iconURL = "";
+      if (file) {
+        const storageRef = storage.ref("icons/" + Date.now() + "_" + file.name);
+        await storageRef.put(file);
+        iconURL = await storageRef.getDownloadURL();
+      }
+
+      await db.collection("comments").add({
+        name,
+        icon: iconURL,
+        text,
+        created: firebase.firestore.Timestamp.now(),
+        parentId: null,
+        likes: 0
+      });
+
+      document.getElementById("commentInput").value = "";
+      document.getElementById("iconInput").value = "";
+      loadComments();
+    });
+
+    loadComments();
+  });
+
+  async function loadComments() {
+    const snapshot = await db.collection("comments").orderBy("created", "desc").get();
+    const comments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const tree = buildThreadTree(comments);
+
+    const html = renderThread(tree);
+    document.getElementById("commentList").innerHTML = html;
+  }
+
+  function buildThreadTree(comments) {
+    const map = {};
+    const root = [];
+
+    comments.forEach(c => map[c.id] = { ...c, children: [] });
+    comments.forEach(c => {
+      if (c.parentId && map[c.parentId]) {
+        map[c.parentId].children.push(map[c.id]);
+      } else {
+        root.push(map[c.id]);
+      }
+    });
+
+    return root;
+  }
+
+  function renderThread(comments, depth = 0) {
+    return comments.map(data => {
+      const iconTag = data.icon
+        ? `<img src="${data.icon}" width="40" height="40" style="border-radius:50%; margin-right:10px;">`
+        : `<div style="width:40px; height:40px; border-radius:50%; background:#ccc; display:inline-block; margin-right:10px;"></div>`;
+
+      const dateStr = data.created?.toDate
+        ? data.created.toDate().toLocaleString()
+        : "";
+
+      return `
+        <div style="margin-left:${depth * 30}px; margin-bottom:16px;">
+          <div style="display:flex; align-items:flex-start;">
+            ${iconTag}
+            <div>
+              <div style="font-weight:bold; font-size:14px;">${data.name}</div>
+              <div style="font-size:13px; background:#f4f4f4; padding:8px; border-radius:6px; max-width:400px;">
+                ${data.text.replace(/\n/g, "<br>")}
+                <div style="font-size:11px; color:#999;">${dateStr}</div>
+              </div>
+              <button onclick="likeComment('${data.id}')">👍 ${data.likes}</button>
+              <button onclick="replyTo('${data.id}', '${data.name}')">返信</button>
+            </div>
+          </div>
+          ${renderThread(data.children, depth + 1)}
+        </div>
+      `;
+    }).join("");
+  }
+
+  async function likeComment(id) {
+    const ref = db.collection("comments").doc(id);
+    await db.runTransaction(async (t) => {
+      const doc = await t.get(ref);
+      const current = doc.data().likes || 0;
+      t.update(ref, { likes: current + 1 });
+    });
+    loadComments();
+  }
+
+  function replyTo(parentId, parentName) {
+    const replyText = prompt(`「${parentName}」さんに返信：`);
+    if (!replyText) return;
+
+    const name = prompt("あなたの名前は？") || "名無し";
+
+    db.collection("comments").add({
+      name,
+      icon: "", // 簡易化（アイコンは無し）
+      text: replyText,
+      created: firebase.firestore.Timestamp.now(),
+      parentId,
+      likes: 0
+    }).then(() => loadComments());
+  }
+</script>
